@@ -14,6 +14,7 @@ import com.dev.emijotashop.dto.CategoryDTO;
 import com.dev.emijotashop.dto.ProductDTO;
 import com.dev.emijotashop.entities.Category;
 import com.dev.emijotashop.entities.Product;
+import com.dev.emijotashop.repositories.CategoryRepository;
 import com.dev.emijotashop.repositories.ProductRepository;
 import com.dev.emijotashop.services.exceptions.DatabaseException;
 import com.dev.emijotashop.services.exceptions.ResourceNotFoundException;
@@ -25,6 +26,9 @@ public class ProductService {
 	
 	@Autowired
 	private ProductRepository repository;
+	
+	@Autowired
+	private CategoryRepository categoryRepository;
 
 	@Transactional(readOnly = true)
 	public Page<ProductDTO> findAllPaged(Pageable pageable) {
@@ -42,11 +46,12 @@ public class ProductService {
 	@Transactional
 	public ProductDTO insert(ProductDTO dto) {
 		Product entity = new Product();
+		copyDtoToEntity(dto, entity);
 		//entity.setName(dto.getName());
 		entity = repository.save(entity);
 		return new ProductDTO(entity);
 	}
-	
+
 	@Transactional
 	public ProductDTO update(Long id, ProductDTO dto) {
 		try {
@@ -70,6 +75,21 @@ public class ProductService {
 		}
 		catch (DataIntegrityViolationException e) {
 			throw new DatabaseException("Integrity violation");
+		}
+	}
+	
+	private void copyDtoToEntity(ProductDTO dto, Product entity) {
+		entity.setName(dto.getName());
+		entity.setDescription(dto.getDescription());
+		entity.setPrice(dto.getPrice());
+		entity.setImgUrl(dto.getImgUrl());
+		entity.setDate(dto.getDate());
+		
+		entity.getCategories().clear();
+		for (CategoryDTO catDto : dto.getCategories()) {
+			Category category = categoryRepository.findById(catDto.getId())
+				    .orElseThrow(() -> new EntityNotFoundException("Category not found with ID: " + catDto.getId()));
+			entity.getCategories().add(category);
 		}
 	}
 }
